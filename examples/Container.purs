@@ -50,7 +50,7 @@ component =
     <> sel CP.cp1 HandleTextSelector [ HP.accept (MediaType "text/plain")
                                      ]
     <> maybeToArray (txt <$> state.txt)
-    <> sel CP.cp1 HandleTextsSelector [ HP.accept (MediaType "text/plain")
+    <> sel CP.cp2 HandleTextsSelector [ HP.accept (MediaType "text/plain")
                                       , HP.multiple true
                                       ]
     <> (txt <$> state.txts)

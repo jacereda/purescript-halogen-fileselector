@@ -61,8 +61,8 @@ blobs :: FileList -> Array Blob
 blobs fs = do
   i <- 0 .. (length fs - 1)
   let f = toMaybe $ item i fs
-  guard $ not $ isNothing f
-  pure $ fileToBlob $ unsafePartial $ fromJust f
+  guard $ not isNothing f
+  pure $ fileToBlob $ unsafePartial fromJust f
 
 texts :: forall e. FileList -> Aff (dom :: DOM | e) (Array String)
 texts = traverse readAsText <<< blobs

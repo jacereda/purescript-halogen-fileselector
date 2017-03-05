@@ -1,0 +1,18 @@
+{
+  "name": "purescript-halogen-fileselector",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-console": "^2.0.0",
+    "purescript-halogen": "^0.12.0",
+    "purescript-debug": "^2.0.0",
+    "purescript-dom-filereader": "^1.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^2.0.0"
+  }
+}

@@ -1,5 +1,4 @@
 module Halogen.FileSelector.Component where
-
 import Prelude
 import Control.Monad.State as CMS
 import Halogen as H
@@ -9,34 +8,36 @@ import Halogen.HTML.Properties as HP
 import Control.Monad.Aff (Aff)
 import Control.MonadZero (guard)
 import DOM (DOM)
+import DOM.Event.Event (target)
+import DOM.Event.Types (Event)
 import DOM.File.FileList (item, length)
-import DOM.File.FileReader.Aff (readAsArrayBuffer, readAsDataURL, readAsText)
 import DOM.File.Types (Blob, FileList, fileToBlob)
+import DOM.HTML.HTMLInputElement (files)
 import DOM.HTML.Indexed (HTMLinput)
 import Data.Array ((..))
-import Data.ArrayBuffer.Types (ArrayBuffer)
-import Data.Maybe (Maybe(..), fromJust, isNothing)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isNothing)
 import Data.Nullable (toMaybe)
-import Data.Traversable (traverse)
 import Halogen.HTML.Properties (IProp)
 import Partial.Unsafe (unsafePartial)
 import Unsafe.Coerce (unsafeCoerce)
 
-type State = FileList
+type State = Array Blob
 
-data Query a  = Select FileList a
+data Query a  = Select Event a
               | GetSelection (State -> a)
 
-data Message = Selected FileList
+data Message = Selected (Array Blob)
+
+type Effects e = (Aff (dom :: DOM | e))
 
 data Slot = Slot
 derive instance eqSlot :: Eq Slot
 derive instance ordSlot :: Ord Slot
 
-selector :: forall r m. Array (IProp HTMLinput r) -> H.Component HH.HTML Query Unit Message m
+selector :: forall e. Array (IProp HTMLinput (Query Unit)) -> H.Component HH.HTML Query Unit Message (Effects e)
 selector props =
   H.component
-    { initialState: const $ unsafeCoerce []
+    { initialState: const []
     , render
     , eval
     , receiver: const Nothing
@@ -45,31 +46,23 @@ selector props =
 
   render :: State -> H.ComponentHTML Query
   render st = HH.input $ [ HP.type_ HP.InputFile
-                         , HE.onFilesSelected (HE.input Select)
-                         ] <> unsafeCoerce props
+                         , HE.onChange (HE.input Select)
+                         ]  <> props
 
-  eval :: Query ~> H.ComponentDSL State Query Message m
-  eval (Select s next) = do
-    CMS.put s
-    H.raise $ Selected s
+  eval :: Query ~> H.ComponentDSL State Query Message (Effects e)
+  eval (Select event next) = do
+    lst <- H.liftEff $ files $ unsafeCoerce $ target event
+    let blobs :: FileList -> Array Blob
+        blobs fs = do
+          i <- 0 .. (length fs - 1)
+          let f = toMaybe $ item i fs
+          guard $ not isNothing f
+          pure $ fileToBlob $ unsafePartial fromJust f
+        sel = fromMaybe [] $ blobs <$> toMaybe lst
+    CMS.put sel
+    H.raise $ Selected sel
     pure next      
   eval (GetSelection reply) = do
     s <- CMS.get
     pure (reply s)
-
-blobs :: FileList -> Array Blob
-blobs fs = do
-  i <- 0 .. (length fs - 1)
-  let f = toMaybe $ item i fs
-  guard $ not isNothing f
-  pure $ fileToBlob $ unsafePartial fromJust f
-
-texts :: forall e. FileList -> Aff (dom :: DOM | e) (Array String)
-texts = traverse readAsText <<< blobs
-          
-urls :: forall e. FileList -> Aff (dom :: DOM | e) (Array String)
-urls = traverse readAsDataURL <<< blobs
-
-buffers :: forall e. FileList -> Aff (dom :: DOM | e) (Array ArrayBuffer)
-buffers = traverse readAsArrayBuffer <<< blobs
 
